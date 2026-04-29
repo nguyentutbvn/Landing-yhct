@@ -1,6 +1,6 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/username/public_html/yhct/
+    - export DEPLOYPATH=/home/n2zngzhdzioa/public_html/nguyentu229.io.vn/tuyensinh
     - /bin/mkdir -p $DEPLOYPATH
     - /bin/cp index.html $DEPLOYPATH
