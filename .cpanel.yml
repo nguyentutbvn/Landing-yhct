@@ -4,4 +4,4 @@ deployment:
     - export DEPLOYPATH=/home/n2zngzhdzioa/public_html/nguyentu229.io.vn/tuyensinh
     - /bin/mkdir -p $DEPLOYPATH
     - /bin/cp index.html $DEPLOYPATH
-    - /bin/cp -R . $DEPLOYPATH
+   
