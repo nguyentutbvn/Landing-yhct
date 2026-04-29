@@ -1,0 +1,467 @@
+{
+  "name": "Tuyển Sinh YHCT - Lead Processing",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tuyen-sinh-yhct",
+        "responseMode": "onReceived",
+        "responseData": "allEntries",
+        "options": {
+          "responseCode": 200,
+          "responseData": "{\"status\":\"ok\",\"message\":\"Đã nhận đăng ký\"}"
+        }
+      },
+      "id": "webhook-1",
+      "name": "Webhook - Nhận Form",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "set-fullname",
+              "name": "fullname",
+              "value": "={{ $json.body.fullname }}",
+              "type": "string"
+            },
+            {
+              "id": "set-phone",
+              "name": "phone",
+              "value": "={{ $json.body.phone }}",
+              "type": "string"
+            },
+            {
+              "id": "set-email",
+              "name": "email",
+              "value": "={{ $json.body.email || 'N/A' }}",
+              "type": "string"
+            },
+            {
+              "id": "set-province",
+              "name": "province",
+              "value": "={{ $json.body.province || 'N/A' }}",
+              "type": "string"
+            },
+            {
+              "id": "set-education",
+              "name": "education",
+              "value": "={{ $json.body.education || 'N/A' }}",
+              "type": "string"
+            },
+            {
+              "id": "set-interest",
+              "name": "interest",
+              "value": "={{ $json.body.interest || 'N/A' }}",
+              "type": "string"
+            },
+            {
+              "id": "set-source",
+              "name": "source",
+              "value": "={{ $json.body.source || 'direct' }}",
+              "type": "string"
+            },
+            {
+              "id": "set-utm-source",
+              "name": "utm_source",
+              "value": "={{ $json.body.utm_source || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "set-utm-medium",
+              "name": "utm_medium",
+              "value": "={{ $json.body.utm_medium || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "set-utm-campaign",
+              "name": "utm_campaign",
+              "value": "={{ $json.body.utm_campaign || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "set-lead-score",
+              "name": "lead_score",
+              "value": "={{ $json.body.lead_score || 5 }}",
+              "type": "number"
+            },
+            {
+              "id": "set-timestamp",
+              "name": "timestamp",
+              "value": "={{ $json.body.timestamp || $now.toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "set-lead-type",
+              "name": "lead_type",
+              "value": "={{ $json.body.lead_score >= 8 ? 'HOT' : $json.body.lead_score >= 5 ? 'WARM' : 'COLD' }}",
+              "type": "string"
+            },
+            {
+              "id": "set-status",
+              "name": "status",
+              "value": "Mới",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "set-data-1",
+      "name": "Chuẩn hóa dữ liệu",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {}
+        },
+        "options": {}
+      },
+      "id": "gsheet-1",
+      "name": "Lưu Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [700, 160]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-hot",
+              "leftValue": "={{ $json.lead_score }}",
+              "rightValue": 8,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-hot-1",
+      "name": "Lead nóng?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [700, 440]
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "=🔥 **LEAD NÓNG - CẦN GỌI NGAY!**\n\n👤 **{{ $json.fullname }}**\n📞 {{ $json.phone }}\n📧 {{ $json.email }}\n📍 {{ $json.province }}\n🎓 {{ $json.education }}\n💊 Quan tâm: {{ $json.interest }}\n📊 Điểm lead: {{ $json.lead_score }}/10\n🔗 Nguồn: {{ $json.utm_source || $json.source }}\n⏰ {{ $json.timestamp }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "telegram-hot-1",
+      "name": "Telegram - Lead nóng",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [940, 340]
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "=📋 **Lead mới đăng ký**\n\n👤 {{ $json.fullname }}\n📞 {{ $json.phone }}\n📧 {{ $json.email }}\n💊 {{ $json.interest }}\n📊 Điểm: {{ $json.lead_score }}/10\n🏷️ Loại: {{ $json.lead_type }}\n🔗 {{ $json.utm_source || $json.source }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "telegram-warm-1",
+      "name": "Telegram - Lead ấm/lạnh",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [940, 540]
+    },
+    {
+      "parameters": {
+        "fromEmail": "tuyensinh@truong.edu.vn",
+        "toEmail": "={{ $json.email }}",
+        "subject": "Chào {{ $json.fullname }} - Cảm ơn bạn đã quan tâm ngành Y Học Cổ Truyền!",
+        "emailType": "html",
+        "html": "=<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;\">\n  <div style=\"background: #1a5c2e; color: white; padding: 30px; text-align: center; border-radius: 12px 12px 0 0;\">\n    <h1 style=\"margin: 0;\">🌿 Y Học Cổ Truyền</h1>\n    <p style=\"margin: 8px 0 0; opacity: 0.9;\">Cảm ơn bạn đã đăng ký!</p>\n  </div>\n  <div style=\"padding: 30px; background: #fff; border: 1px solid #e5e5e5;\">\n    <p>Xin chào <strong>{{ $json.fullname }}</strong>,</p>\n    <p>Cảm ơn bạn đã quan tâm đến ngành <strong>Y Học Cổ Truyền</strong>. Chúng tôi đã nhận được thông tin đăng ký của bạn.</p>\n    <p>Đội ngũ tư vấn sẽ liên hệ bạn qua số điện thoại <strong>{{ $json.phone }}</strong> trong vòng <strong>24 giờ</strong>.</p>\n    <hr style=\"margin: 20px 0; border: none; border-top: 1px solid #eee;\">\n    <h3>📚 Trong thời gian chờ, bạn có thể:</h3>\n    <ul>\n      <li>Tìm hiểu chương trình đào tạo chi tiết</li>\n      <li>Xem video giới thiệu ngành</li>\n      <li>Đọc chia sẻ từ cựu sinh viên</li>\n    </ul>\n    <div style=\"text-align: center; margin: 30px 0;\">\n      <a href=\"#\" style=\"display: inline-block; background: #c8a951; color: #1a1a1a; padding: 14px 32px; border-radius: 30px; text-decoration: none; font-weight: bold;\">XEM CHƯƠNG TRÌNH ĐÀO TẠO</a>\n    </div>\n    <p style=\"color: #888; font-size: 13px;\">Nếu cần hỗ trợ gấp, gọi Hotline: <strong>1900 1234</strong></p>\n  </div>\n  <div style=\"text-align: center; padding: 20px; color: #aaa; font-size: 12px;\">\n    © 2026 Khoa Y Học Cổ Truyền<br>\n    <a href=\"#\" style=\"color: #aaa;\">Hủy đăng ký nhận email</a>\n  </div>\n</div>",
+        "options": {}
+      },
+      "id": "email-confirm-1",
+      "name": "Email xác nhận",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [700, 620]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      },
+      "id": "cron-report-1",
+      "name": "Cron - Báo cáo 8h sáng",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 800]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "Sheet1"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "id": "filter-today",
+              "leftValue": "={{ $json.timestamp }}",
+              "rightValue": "={{ $now.minus({days: 1}).toISO() }}",
+              "operator": {
+                "type": "string",
+                "operation": "gte"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "gsheet-read-1",
+      "name": "Đọc leads hôm qua",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [460, 800],
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "=📊 **BÁO CÁO TUYỂN SINH HÀNG NGÀY**\n━━━━━━━━━━━━━━━━━━\n\n📅 Ngày: {{ $now.format('dd/MM/yyyy') }}\n📝 Tổng lead mới: {{ $input.all().length }}\n🔥 Lead nóng: {{ $input.all().filter(i => i.json.lead_score >= 8).length }}\n🟡 Lead ấm: {{ $input.all().filter(i => i.json.lead_score >= 5 && i.json.lead_score < 8).length }}\n🔵 Lead lạnh: {{ $input.all().filter(i => i.json.lead_score < 5).length }}\n\n📌 Top nguồn:\n{{ $input.all().map(i => i.json.utm_source || i.json.source).filter((v,i,a) => a.indexOf(v) === i).join(', ') }}\n\n━━━━━━━━━━━━━━━━━━\n💡 Nhớ follow-up lead nóng trong ngày!",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "telegram-report-1",
+      "name": "Telegram - Báo cáo ngày",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [700, 800]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-email",
+              "leftValue": "={{ $json.email }}",
+              "rightValue": "N/A",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            },
+            {
+              "id": "check-email-empty",
+              "leftValue": "={{ $json.email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-email-1",
+      "name": "Có email?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [460, 620]
+    },
+    {
+      "parameters": {
+        "amount": 3,
+        "unit": "days"
+      },
+      "id": "wait-nurture-1",
+      "name": "Chờ 3 ngày",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [940, 700]
+    },
+    {
+      "parameters": {
+        "fromEmail": "tuyensinh@truong.edu.vn",
+        "toEmail": "={{ $json.email }}",
+        "subject": "{{ $json.fullname }} ơi - 3 điều bạn chưa biết về ngành Y Học Cổ Truyền",
+        "emailType": "html",
+        "html": "=<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;\">\n  <div style=\"padding: 30px; background: #fff;\">\n    <h2 style=\"color: #1a5c2e;\">🌿 3 điều thú vị về ngành YHCT</h2>\n    <p>Chào <strong>{{ $json.fullname }}</strong>,</p>\n    <p>Hy vọng bạn đã tìm hiểu thêm về ngành Y Học Cổ Truyền. Đây là 3 điều có thể bạn chưa biết:</p>\n    <ol>\n      <li><strong>Thu nhập cao:</strong> Bác sĩ YHCT mở phòng khám riêng có thể đạt 30-50 triệu/tháng</li>\n      <li><strong>Nhu cầu tăng:</strong> Xu hướng trị liệu tự nhiên đang bùng nổ toàn cầu</li>\n      <li><strong>Đa dạng nghề:</strong> Từ bệnh viện, spa cao cấp đến nghiên cứu dược liệu</li>\n    </ol>\n    <div style=\"text-align: center; margin: 30px 0;\">\n      <a href=\"#\" style=\"display: inline-block; background: #c8a951; color: #1a1a1a; padding: 14px 32px; border-radius: 30px; text-decoration: none; font-weight: bold;\">ĐĂNG KÝ NGAY - CÒN 200 SUẤT HỌC BỔNG</a>\n    </div>\n    <p style=\"color: #888;\">Có thắc mắc? Gọi ngay <strong>1900 1234</strong></p>\n  </div>\n</div>",
+        "options": {}
+      },
+      "id": "email-nurture-1",
+      "name": "Email nurture (3 ngày sau)",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1160, 700]
+    }
+  ],
+  "connections": {
+    "Webhook - Nhận Form": {
+      "main": [
+        [
+          {
+            "node": "Chuẩn hóa dữ liệu",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chuẩn hóa dữ liệu": {
+      "main": [
+        [
+          {
+            "node": "Lưu Google Sheets",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Lead nóng?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Có email?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lead nóng?": {
+      "main": [
+        [
+          {
+            "node": "Telegram - Lead nóng",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Telegram - Lead ấm/lạnh",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Có email?": {
+      "main": [
+        [
+          {
+            "node": "Email xác nhận",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Email xác nhận": {
+      "main": [
+        [
+          {
+            "node": "Chờ 3 ngày",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chờ 3 ngày": {
+      "main": [
+        [
+          {
+            "node": "Email nurture (3 ngày sau)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cron - Báo cáo 8h sáng": {
+      "main": [
+        [
+          {
+            "node": "Đọc leads hôm qua",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Đọc leads hôm qua": {
+      "main": [
+        [
+          {
+            "node": "Telegram - Báo cáo ngày",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "tags": [
+    {
+      "name": "tuyen-sinh",
+      "id": "tag-1"
+    },
+    {
+      "name": "yhct",
+      "id": "tag-2"
+    }
+  ]
+}
